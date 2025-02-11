@@ -10,7 +10,6 @@ XHS_CONFIG = {
 WECOM_CONFIG = {
     "WEBHOOK_URL": "自己获取的Webhook URL"
 }
-# feat: Add multi-threaded support for real-time monitoring of multiple users.
 MONITOR_CONFIG = {
     "USER_ID_1": "被监控用户的小红书id",
     "USER_ID_2": "被监控用户的小红书id",
