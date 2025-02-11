@@ -1,14 +1,14 @@
 # 小红书用户动态实时监控
-
+**注意⚠️** 此项目是根据别人的项目写的，原项目地址：https://github.com/beilunyang/xhs-monitor
 XHS Monitor 是一个基于 Python 的小红书动态监控系统，旨在实时监控用户的小红书笔记更新，并通过企业微信机器人进行通知。此项目最初是根据开源项目进行修改，添加了自动点赞、评论功能。
-此项目是根据别人的项目写的，原项目地址：https://github.com/beilunyang/xhs-monitor
 
 ## 项目背景
 
-根据自己的需求对该项目进行了修改和增强，增加了以下功能：
+根据自己的需求对该项目进行了修改和增强，项目主要有以下功能：
 - 自动点赞和评论
-- 评论生成模块，使用自定义算法生成高情商的个性化评论
+- 评论生成模块，使用LLM大模型生成高情商的个性化评论
 - 更加灵活的错误处理与通知功能
+- 多用户监控
 
 ## 项目功能
 
@@ -19,11 +19,13 @@ XHS Monitor 是一个基于 Python 的小红书动态监控系统，旨在实时
 
 ## 安装和使用
 ### 安装所需库
-```python
+```bash
 pip3 install -r requirements.txt
 playwright install
 ```
 ### 修改配置文件 config.py
-
-```python
+配置小红书的 cookie 信息和企业微信 webhook URL
+配置监控的用户ID和检查间隔等参数
+### 运行程序
+```bash
 python monitor.py
