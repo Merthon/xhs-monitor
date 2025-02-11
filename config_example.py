@@ -10,10 +10,15 @@ XHS_CONFIG = {
 WECOM_CONFIG = {
     "WEBHOOK_URL": "自己获取的Webhook URL"
 }
-
+# feat: Add multi-threaded support for real-time monitoring of multiple users.
 MONITOR_CONFIG = {
-    "USER_ID": "被监控用户的小红书id", 
-    "CHECK_INTERVAL": 5, #检查笔记更新
+    "USER_ID_1": "被监控用户的小红书id",
+    "USER_ID_2": "被监控用户的小红书id",
+    "USER_ID_3": "被监控用户的小红书id",
+    "USER_ID_4": "被监控用户的小红书id",
+    "USER_ID_5": "被监控用户的小红书id",
+    # "USER_ID": "被监控用户的小红书id",
+    "CHECK_INTERVAL": 5,  # 检查笔记更新时间（秒）
     "ERROR_COUNT": 10,
     "AUTO_INTERACT": True,  # 是否开启自动互动
     "FALLBACK_COMMENTS": [  # 随机选择一条评论

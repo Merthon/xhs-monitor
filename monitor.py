@@ -6,6 +6,8 @@ from utils import xhs_sign
 from db import Database
 from wecom import WecomMessage
 from comment_generator import CommentGenerator
+import threading
+from concurrent.futures import ThreadPoolExecutor
 
 class XHSMonitor:
     def __init__(self, cookie: str, webhook_url: str):
@@ -15,6 +17,9 @@ class XHSMonitor:
         self.db = Database()
         self.error_count = 0
         self.comment_generator = CommentGenerator()
+        self.lock = threading.Lock()  # 用于保护数据库等共享资源
+        # 创建线程池，最大同时运行5个线程
+        self.executor = ThreadPoolExecutor(max_workers=5)
         
     def send_error_notification(self, error_msg: str):
         """
@@ -178,59 +183,84 @@ class XHSMonitor:
         
         self.wecom.send_text("\n".join(content))
 
+    def monitor_multiple_users(self, user_ids: List[str], interval: int):
+        """
+        同时监控多个用户动态
+        :param user_ids: 用户ID列表
+        :param interval: 检查间隔(秒)
+        """
+        print(f"开始监控多个用户: {user_ids}")
+
+        # 提交每个用户的监控任务到线程池
+        futures = [self.executor.submit(self.monitor_user, user_id, interval) for user_id in user_ids]
+
+        # 等待所有任务完成
+        for future in futures:
+            future.result()  # 如果任务失败，会抛出异常
+
     def monitor_user(self, user_id: str, interval: int):
         """
-        监控用户动态
+        监控单个用户动态
         :param user_id: 用户ID
         :param interval: 检查间隔(秒)
         """
         print(f"开始监控用户: {user_id}")
-        
+
         while True:
             try:
-                # 获取用户最新的笔记
                 latest_notes = self.get_latest_notes(user_id)
-                # 检查该用户是否为首次监控
-                existing_notes = self.db.get_user_notes_count(user_id)
-                is_first_monitor = existing_notes == 0 and len(latest_notes) > 1
-                
-                if is_first_monitor:
-                    # 如果是首次监控，发送欢迎消息并记录笔记
-                    welcome_msg = (
-                        f"欢迎使用 xhs-monitor 系统\n"
-                        f"监控用户：{latest_notes[0].get('user', {}).get('nickname', user_id)}\n"
-                        f"首次监控某用户时，不会对历史笔记进行自动点赞和评论，仅保存笔记记录\n"
-                        f"以防止被系统以及用户发现"
-                    )
-                    self.wecom.send_text(welcome_msg)
-                    
-                    for note in latest_notes:
-                        self.db.add_note_if_not_exists(note)
-                else:
-                    # 如果不是首次监控，则对最新的笔记进行点赞和评论
-                    for note in latest_notes:
-                        if self.db.add_note_if_not_exists(note):
-                            print(f"发现新笔记: {note.get('display_title')}")
-                            interact_result = self.interact_with_note(note)
-                            self.send_note_notification(note, interact_result)
-                        
+
+                # 使用锁来保护数据库操作
+                with self.lock:
+                    existing_notes = self.db.get_user_notes_count(user_id)
+                    is_first_monitor = existing_notes == 0 and len(latest_notes) > 1
+
+                    if is_first_monitor:
+                        welcome_msg = (
+                            f"欢迎使用小红书用户监控系统\n"
+                            f"监控用户：{latest_notes[0].get('user', {}).get('nickname', user_id)}\n"
+                            f"首次监控某用户时，不会对历史笔记进行自动点赞和评论，仅保存笔记记录\n"
+                            f"以防止被系统以及用户发现"
+                        )
+                        self.wecom.send_text(welcome_msg)
+
+                        for note in latest_notes:
+                            self.db.add_note_if_not_exists(note)
+                    else:
+                        for note in latest_notes:
+                            with self.lock:
+                                if self.db.add_note_if_not_exists(note):
+                                    print(f"发现新笔记: {note.get('display_title')}")
+                                    interact_result = self.interact_with_note(note)
+                                    self.send_note_notification(note, interact_result)
+
             except Exception as e:
                 error_msg = str(e)
                 print(f"监控过程发生错误: {error_msg}")
+
             time.sleep(interval)
 
+
 def main():
-    # 创建 XHSMonitor 实例，传入必要的配置
     monitor = XHSMonitor(
         cookie=XHS_CONFIG["COOKIE"],
         webhook_url=WECOM_CONFIG["WEBHOOK_URL"]
     )
-    # 开始监控用户，传入用户ID和检查间隔
-    monitor.monitor_user(
-        user_id=MONITOR_CONFIG["USER_ID"],
+
+    # 假设你要监控5个用户
+    user_ids = [
+        MONITOR_CONFIG["USER_ID_1"],
+        MONITOR_CONFIG["USER_ID_2"],
+        MONITOR_CONFIG["USER_ID_3"],
+        MONITOR_CONFIG["USER_ID_4"],
+        MONITOR_CONFIG["USER_ID_5"]
+    ]
+
+    monitor.monitor_multiple_users(
+        user_ids=user_ids,
         interval=MONITOR_CONFIG["CHECK_INTERVAL"]
     )
 
 
 if __name__ == "__main__":
-    main() 
+    main()
